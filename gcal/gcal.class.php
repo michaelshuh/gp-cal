@@ -134,7 +134,6 @@ class gCal {
 	}  // end getCalendar
 
 	function getEvent($xmlevent, $calname, $show, $tagstring) {
-		//global $timestart, $timeend, $eventarray, $exceptionarray, $textile;
 		$showevent = true;
 
 		/* parse title field */
@@ -216,8 +215,6 @@ class gCal {
 		list($pre_open_bracket,$post_open_bracket) = explode('[', $content);
 		list($inside_brackets,$post_close_bracket) = explode(']', $post_open_bracket);
 		$content = $pre_open_bracket.$post_close_bracket;
-		$content = str_replace('&quot;', '"', $content);    // aish. for textile use.
-		$inside_brackets = str_replace('&quot;', '"', $inside_brackets);
 		
 		/* parse start/end times */
 		

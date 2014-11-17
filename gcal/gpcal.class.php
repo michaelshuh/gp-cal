@@ -19,12 +19,8 @@
  * Display events in blog style
 /* ---------------------------------------------------------------------------------- */
 require_once('gcal.class.php');
-require_once(GCAL_PATH . '../textile.php');
 
 class GPCal extends gCal {
-	// global var
-	var $textile;
-	
 	// rss feeds
 	var $rsstitle;
 	var $rssdesc;
@@ -37,7 +33,6 @@ class GPCal extends gCal {
 		$this->rssdesc = $options['desc'];
 		$this->rsslink = $options['link'];
 		
-		$this->textile = new Textile;
 	} // end gCalWeb()
 	
 	// requires:
