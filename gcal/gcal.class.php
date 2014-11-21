@@ -30,7 +30,6 @@
 
 define('GCAL_PATH', dirname(__FILE__) . '/');
 // include files
-require_once(GCAL_PATH . '../xml.php');
 require_once(GCAL_PATH . '../google-api-php-client/autoload.php');
 
 class gCal {
@@ -46,22 +45,17 @@ class gCal {
     var $exceptions;        // temporary storage array for exception events
         
     // time vars
-    var $cal_startdate;     // $startdate
-    var $cal_enddate;       // $enddate
-    var $cal_starttime;     // $timestart
-    var $cal_endtime;       // $timeend
+    var $cal_timeMin;     // $startdate
+    var $cal_timeMax;       // $enddate
     var $cal_windowsec;     // $windowsec
 
-    var $gcal_suffix = 'T00:00:00-08:00';   // $gcalsuffix (-0800 = PST)
-    var $gcal_startmin;                     // $startmin
-    var $gcal_startmax;                     // $startmax
-    
     // misc
     var $id = 0;                // for unique div id's
     var $debug;
     var $url = 'http://www.google.com/calendar/feeds/';
 
     var $service;
+    var $client;
     
     // ----------------------------------------------------------------------------------
     // initialize
@@ -83,24 +77,17 @@ class gCal {
         if ($this->debug) echo 'tags: '.$options['tags'].' <br />';
 
         // time stuff
-        $this->cal_startdate = $options['startdate'] ? $options['startdate'] : date('Y-m-d', time());
-        $this->cal_starttime = strtotime($this->cal_startdate);
-        $this->gcal_startmin = $this->cal_startdate.$this->gcal_suffix;
-        
-        $this->gcal_windowsec = 
-            $options['numdays'] ? ($options['numdays'] + 1) * 86400 : 2678400;  // 86400 sec = 1 day; 2678400 sec = 30 days (inclusive)
-        $this->cal_endtime = $this->cal_starttime + $this->gcal_windowsec;
-        $this->cal_enddate = date('Y-m-d', $this->cal_endtime);
-        $this->gcal_startmax = $this->cal_enddate.$this->gcal_suffix;
-        if ($this->debug) echo $this->cal_startdate.' -- '.$this->cal_enddate;
+        $this->cal_timeMin = date(DateTime::ATOM, time());
+        $timeSpan = $options['numdays'] ? ($options['numdays'] + 1) * 86400 : 2678400;  // 86400 sec = 1 day; 2678400 sec = 30 days (inclusive)
+        $this->cal_timeMax = date(DateTime::ATOM, time() + $timeSpan);
         
         // kick off main()
 
-        $client = new Google_Client();
-        $client->setApplicationName("GP Calendar Widget");
-        $client->setDeveloperKey($cal["calendar_apikey"]);
+        $this->client = new Google_Client();
+        $this->client->setApplicationName("GP Calendar Widget");
+        $this->client->setDeveloperKey($cal["calendar_apikey"]);
 
-        $this->service = new Google_Service_Calendar($client);
+        $this->service = new Google_Service_Calendar($this->client);
 
         $this->main();
         
@@ -116,39 +103,38 @@ class gCal {
         $apikey = $cal['calendar_apikey'];
         $calname = $cal['calendar_name'];
 
-        $urlstring = $this->url.$userid.'/private-'.$magiccookie.'/full?start-min='.$this->gcal_startmin.'&start-max='.$this->gcal_startmax;
-
-        if ($this->debug) echo '<br />url:' . $urlstring . '<br />$GLOBALS[lookup]: ' . $GLOBALS['lookup'];
-        $xml = file_get_contents($urlstring);
-        if (!$xml) {
-            echo 'Not a valid URL';
-            return false;
-        }
-        $data = XML_unserialize($xml);
+        $optParams = array("timeMin" => $this->cal_timeMin, "timeMax" => $this->cal_timeMax, "singleEvents" => TRUE);
+        if ($this->debug) echo $this->cal_timeMin.' -- '.$this->cal_timeMax;
+        $events = $this->service->events->listEvents($userid, $optParams);
 
         if ($this->debug) {
-            echo "<p /><strong>$calname</strong><br />$urlstring<br />show: $show <br />";
+            echo "<p /><strong>$calname</strong><br />tagString: $tagstring<br/>show: $show <br />";
         }
 
-        // zero entries
-        if (!$data['feed']['entry']) return;
-        // one entry
-        else if (!is_array($data['feed']['entry'][0])) $this->getEvent($data['feed']['entry'], $calname, $show, $tagstring);
-        // two or more entries
-        else {
-            foreach($data['feed']['entry'] as $xmlevent) {
-                $this->getEvent($xmlevent, $calname, $show, $tagstring);
+        while(true) {
+            foreach ($events->getItems() as $event) {
+                $this->parseEvent($event, $calname, $show, $tagstring);
+            }
+            $pageToken = $events->getNextPageToken();
+            if ($pageToken) {
+                $newOptParam = $optParam;
+                $newOptParam["pageToken"] = $pageToken;
+                $events = $service->events->listEvents($userid, $newOptParam);
+            } else {
+                break;
             }
         }
+
+                //$this->getEvent($xmlevent, $calname, $show, $tagstring);
     }  // end getCalendar
 
-    function getEvent($xmlevent, $calname, $show, $tagstring) {
+    function parseEvent($googleEvent, $calname, $show, $tagstring) {
         $showevent = true;
 
         /* parse title field */
         // '! ...'  denotes normal event
         // '!! ...'     denotes featured event
-        $title = $xmlevent['title'];
+        $title = $googleEvent->getSummary();
         if (substr($title, 0, 1) == '!') {
             $isnormal = true;
             $title = substr($title, 1);
@@ -201,13 +187,10 @@ class gCal {
         }
         
         /* get ID */
-        $explode_id = explode('/', $xmlevent['id']);
-        $id = $explode_id[sizeof($explode_id) - 1];     // last element is the most interesting (actual id)
+        $id = $googleEvent->getId();
         
         /* get status */
-        $status = strstr($xmlevent['gd:eventStatus attr']['value'], '#');
-        // "#event.confirmed" => "confirmed"
-        $status = substr($status, 7);
+        $status = $googleEvent->getStatus();
         if ($status == 'canceled') {
             $showevent = false;
             if (!$this->debug) return;
@@ -217,51 +200,15 @@ class gCal {
         // possible text examples:
         // "getactive"
         // "getactive @ 2855 telegraph ave, berkeley 94705"
-        list($location,$address) = explode('@', $xmlevent['gd:where attr']['valueString']);
+        list($location,$address) = explode('@', $googleEvent->getLocation());
 
         /* get content */
-        $content = $xmlevent['content'];
+        $content = $googleEvent->getDescription();
         list($pre_open_bracket,$post_open_bracket) = explode('[', $content);
         list($inside_brackets,$post_close_bracket) = explode(']', $post_open_bracket);
         $content = $pre_open_bracket.$post_close_bracket;
         
-        /* parse start/end times */
-        
-        // "stub" event (phantom events with no times)
-        if (!($xmlevent['gd:when'] || $xmlevent['gd:when attr'])) {
-            $showevent = false;
-            if (!$this->debug) return;
-        }
-
-        // recurring event: "parent"
-        // TODO: SOME RECURRING EVENTS FALL ON THE DAY BEFORE CAL_STARTTIME (GCAL BUG)
-        else if (count($xmlevent['gd:when']) > 2) {
-            // temporary array for recurring event times
-            $recurrences = array();
-            
-            $xmltimes = $xmlevent['gd:when'];
-            for($i=0; $i<count($xmltimes)/2; $i++) {
-                // fill recurring events array
-                $recurrences[] = $this->parseTimes($xmltimes[$i.' attr']['startTime'], $xmltimes[$i.' attr']['endTime'], 'assoc');
-            }
-            
-            // since the parent (recurring) event occurs at the end of xml, exception array should be filled already.
-            // let's check the said exception array!
-            usort($recurrences, sortByTime);
-            
-            // $recurrences[0] is the earliest time
-            $starttime = $recurrences[0]['starttime'];
-            $endtime = $recurrences[0]['endtime'];
-            $allday = $recurrences[0]['allday'];
-            
-            $event = $this->exceptions[$id.'_'.$starttime];
-        }
-
-        // single (non-recurring) event
-        else {
-            list ($starttime, $endtime, $allday) = 
-                $this->parseTimes($xmlevent['gd:when attr']['startTime'], $xmlevent['gd:when attr']['endTime']);
-        }
+        list ($starttime, $endtime, $allday) = $this->parseTimes($googleEvent->getStart(), $googleEvent->getEnd());
 
         // if event doesn't exist (a recurring event might already exist w/n scope)
         if (!$event) {
@@ -276,22 +223,14 @@ class gCal {
                 'endtime'   => $endtime, 
                 'allday'    => $allday, 
                 'isnormal'  => $isnormal, 
-                'isfeatured'    => $isfeatured, 
+                'isfeatured'=> $isfeatured, 
                 'tag'       => $event_tags, 
                 'cal'       => $calname,
                 'status'    => $status, 
-                'showevent'     => $showevent,
+                'showevent' => $showevent,
                 'post_link' => $inside_brackets
             );
         
-            // check if this is an exception to a recurring event: if so, fill in a separate array
-            if ($xmlevent['gd:originalEvent']) {
-                $parentid = $xmlevent['gd:originalEvent attr']['id'];
-                $event['isexception'] = true;
-                $event['parentid'] = $parentid;
-                $this->exceptions[$parentid.'_'.$starttime] = $event;
-                return;
-            }
         }
         
         /* add event to events array */
@@ -305,21 +244,16 @@ class gCal {
 
     // given start and end times (in gCal format), return into unix timestamp
     // return array: [starttime, endtime, allday]
-    function parseTimes($start, $end, $typeofarray = 'regular') {
+    function parseTimes($eventStartTime, $eventEndTime, $typeofarray = 'regular') {
 
-        // events that are not entire days
-        // (format: 2006-07-04T18:00:00.000-07:00)
-        if (strlen($start) > 10) {
-            $allday = false;
-            $starttime = $this->gCalTime($start);
-            $endtime = $this->gCalTime($end);
-        }
-        // events that are all day (or more than one day)
-        // (format: 2006-07-02)
-        else {
+        if ($eventStartTime->getDate() != null) {
             $allday = true;
-            $starttime = strtotime($start);
-            $endtime = strtotime($end) - 86400;         // gCal adds an extra day
+            $starttime = strtotime($eventStartTime->getDate());
+            $endtime = strtotime($eventEndTime->getDate());
+        } else {
+            $allday = false;
+            $starttime = $this->gCalTime($eventStartTime->getDateTime());
+            $endtime = $this->gCalTime($eventEndTime->getDateTime());
         }
         
         if ($typeofarray == 'assoc') $arr = array('starttime' => $starttime, 'endtime' => $endtime, 'allday' => $allday);
