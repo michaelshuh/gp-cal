@@ -97,8 +97,8 @@ class gCal {
         // kick off main()
 
         $client = new Google_Client();
-        $client->setApplicationName("MY APPLICATION NAME");
-        $client->setDeveloperKey("");
+        $client->setApplicationName("GP Calendar Widget");
+        $client->setDeveloperKey($cal["calendar_apikey"]);
 
         $this->service = new Google_Service_Calendar($client);
 
@@ -113,7 +113,7 @@ class gCal {
     // eventarray is an array of events (that are associative arrays)
     function getCalendar($cal, $show = '', $tagstring = '') {
         $userid = $cal['calendar_userid'];
-        $magiccookie = $cal['calendar_password'];
+        $apikey = $cal['calendar_apikey'];
         $calname = $cal['calendar_name'];
 
         $urlstring = $this->url.$userid.'/private-'.$magiccookie.'/full?start-min='.$this->gcal_startmin.'&start-max='.$this->gcal_startmax;

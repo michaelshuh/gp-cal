@@ -48,10 +48,10 @@ class Gracepoint_Calendar_Widget extends WP_Widget {
 		$tags = $instance['gp_cal_tags'];
 		
 		$userid = $this_calendar['cal_userid'];
-		$password = $this_calendar['cal_pwd'];
+		$apikey = $this_calendar['cal_apikey'];
 		$cal_name = $this_calendar['cal_name'];
 		
-		$myCalendar = array("calendar_userid" => $userid, "calendar_password" => $password, "calendar_name" => $cal_name);
+		$myCalendar = array("calendar_userid" => $userid, "calendar_apikey" => $apikey, "calendar_name" => $cal_name);
 		
 		echo $before_widget;
 		echo $before_title . 'Upcoming Events' . $after_title;

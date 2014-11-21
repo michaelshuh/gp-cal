@@ -46,21 +46,21 @@ function gp_cal_settings_page() {
 	    for( $i = 0; $i < $count; $i++ ) {
 	        $cal_name = $_POST["cal_name_" . $i];
     	    $cal_userid = $_POST["cal_userid_" . $i];
-    	    $cal_pwd = $_POST["cal_pwd_" . $i];
+    	    $cal_apikey = $_POST["cal_apikey_" . $i];
 
-    	    $entry_array = array("cal_name" => $cal_name, "cal_userid" => $cal_userid, "cal_pwd" => $cal_pwd);
+    	    $entry_array = array("cal_name" => $cal_name, "cal_userid" => $cal_userid, "cal_apikey" => $cal_apikey);
     	    array_push( $gp_cal_widget_settings, $entry_array );
 	    }  
 		update_option( 'gp-cal-widget-settings', $gp_cal_widget_settings );
 	} 
 
 	if (isset($_POST['add_entry'])) {
-			$count = count( $gp_cal_widget_settings );
+        $count = count( $gp_cal_widget_settings );
 	    $cal_name = $_POST["cal_name_" . $count];
 	    $cal_userid = $_POST["cal_userid_" . $count];
-	    $cal_pwd = $_POST["cal_pwd_" . $count];
+	    $cal_apikey = $_POST["cal_apikey_" . $count];
 
-	    $entry_array = array("cal_name" => $cal_name, "cal_userid" => $cal_userid, "cal_pwd" => $cal_pwd);
+	    $entry_array = array("cal_name" => $cal_name, "cal_userid" => $cal_userid, "cal_apikey" => $cal_apikey);
 
 	    array_push( $gp_cal_widget_settings, $entry_array );
 
@@ -86,7 +86,7 @@ function gp_cal_settings_page() {
 				    <tr valign="top">
 				        <th>Calendar Name</th>
 				        <th>Calendar User ID</th>
-				        <th>Calendar Password</th>
+				        <th>Calendar API Key</th>
 				        <th>Add/Delete</th>
 				    </tr>
 				    <?php 
@@ -95,7 +95,7 @@ function gp_cal_settings_page() {
 				            echo '<tr valign="top">';
 				            echo '<td><input name="cal_name_'.$count.'" type="text" value="'.$entry["cal_name"].'" /></td>';
 				            echo '<td><input name="cal_userid_'.$count.'" type="text" value="'.$entry["cal_userid"].'" /></td>';
-				            echo '<td><input name="cal_pwd_'.$count.'" type="text" value="'.$entry["cal_pwd"].'" /></td>';
+				            echo '<td><input name="cal_apikey_'.$count.'" type="text" value="'.$entry["cal_apikey"].'" /></td>';
 				            echo '<td><button name="delete_entry" class="button-secondary" value="'.$count.'" type="submit">Delete</button></td>';
 				            echo '</tr>';
 				            $count++;
@@ -104,7 +104,7 @@ function gp_cal_settings_page() {
 	                <tr valign="top">
 	                    <td><input name="<?php echo "cal_name_" . $count; ?>" type="text" /></td>
 	                    <td><input name="<?php echo "cal_userid_" . $count; ?>" type="text" /></td>
-	                    <td><input name="<?php echo "cal_pwd_" . $count; ?>" type="text" /></td>
+	                    <td><input name="<?php echo "cal_apikey" . $count; ?>" type="text" /></td>
 	                    <td><input type="submit" name="add_entry" class="button-secondary" value="Add" /></td>
 	                </tr>  
 				</table>
