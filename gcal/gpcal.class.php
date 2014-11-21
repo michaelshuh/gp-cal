@@ -22,17 +22,8 @@ require_once('gcal.class.php');
 
 class GPCal extends gCal {
 	// rss feeds
-	var $rsstitle;
-	var $rssdesc;
-	var $rsslink;
-
 	function GPCal($cal, $options = array()) {
 		parent :: gCal($cal, $options);
-		
-		$this->rsstitle = $options['title'];
-		$this->rssdesc = $options['desc'];
-		$this->rsslink = $options['link'];
-		
 	} // end gCalWeb()
 	
 	// requires:
