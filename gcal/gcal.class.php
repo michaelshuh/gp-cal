@@ -30,7 +30,7 @@
 
 define('GCAL_PATH', dirname(__FILE__) . '/');
 // include files
-require_once(GCAL_PATH . '../google-api-php-client/autoload.php');
+require_once(GCAL_PATH . '../google-api-php-client/src/Google/autoload.php');
 
 class gCal {
     // ----------------------------------------------------------------------------------
