@@ -56,6 +56,7 @@ class gCal {
 
     var $service;
     var $client;
+    var $googleConfig;
     
     // ----------------------------------------------------------------------------------
     // initialize
@@ -83,7 +84,10 @@ class gCal {
         
         // kick off main()
 
-        $this->client = new Google_Client();
+        $this->googleConfig = new Google_Config();
+        $this->googleConfig->setIoClass("Google_IO_Stream");
+
+        $this->client = new Google_Client($this->googleConfig);
         $this->client->setApplicationName("GP Calendar Widget");
         $this->client->setDeveloperKey($cal["calendar_apikey"]);
 
